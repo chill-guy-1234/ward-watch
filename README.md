@@ -52,7 +52,9 @@ lambda/            Deployed AWS Lambda functions (container images)
 frontend/          Next.js app (static export), deployed via Amplify
                    Hosting — chat / ward lookup / about, calling the
                    Function URLs above directly, no server compute needed
-data/raw/          source documents (gitignored — not code)
+data/raw/          local working copies of source documents (gitignored —
+                   not code); the canonical store is s3://wardwatch-documents/raw/,
+                   see "Document corpus storage" below
 docs/              research and verification notes
 ```
 
@@ -181,6 +183,27 @@ question — rather than being silent on it.
 Verified end-to-end: correctly explains SCB is not part of GHMC, cites the
 merger dispute, and correctly distinguishes GHMC's elected-ward governance
 from HMDA's appointed planning role.
+
+### Document corpus storage (2026-08-16)
+
+All 11 ingested source documents now also live in **`s3://wardwatch-documents/raw/`**
+(private, versioned, SSE-S3 encrypted) — the canonical store, not the
+gitignored local `data/raw/` folder, which was never backed up or shared
+across machines. `ingest.py` accepts an `s3://` URI directly:
+
+```powershell
+..\.venv\Scripts\python ingest.py s3://wardwatch-documents/raw/ghmc-budget-2025-26.pdf `
+    --title "GHMC Budget Estimates 2025-26" --doc-type budget_pdf `
+    --publisher GHMC --published-date 2025-02-01
+```
+
+(downloads to a temp file, then extracts/chunks/embeds exactly as it would
+a local path). Local `data/raw/` still works and is still the more
+convenient option for iterating on a document that isn't uploaded yet —
+upload it once it's good, same as the 11 already there. This also lays the
+groundwork for the eventual Scraper Agent (§7 of the handover doc): it
+needs *somewhere* to drop newly-found documents before the pipeline
+processes them, and a local laptop folder was never going to be that place.
 
 ### Deployed chatbot endpoint
 
