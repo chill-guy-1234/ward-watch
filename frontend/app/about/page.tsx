@@ -65,6 +65,17 @@ export default function AboutPage() {
         the app.
       </p>
 
+      <h2>The budget flow diagram</h2>
+      <p>
+        The Budget page shows where GHMC&apos;s FY 2025-26 money comes from
+        and goes, city-level only — no zone, circle or ward breakdown exists
+        publicly for Hyderabad yet. Built from the one table pair in the
+        source PDF that isn&apos;t restated elsewhere, hand-checked to sum
+        to the exact verified total, specifically to sidestep the ~5x
+        inflation the automated extraction agent produces when summed (see
+        &quot;What&apos;s deliberately missing&quot; below).
+      </p>
+
       <h2>The transport map</h2>
       <p>
         Station coordinates for Metro (Red, Green, Blue), MMTS suburban rail,

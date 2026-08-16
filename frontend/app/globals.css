@@ -625,3 +625,98 @@ input {
   font-size: 0.8rem;
   color: var(--muted);
 }
+
+/* ---- budget sankey page ---- */
+
+.main:has(.budget-page) {
+  max-width: 1000px;
+}
+
+.budget-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sankey-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.sankey-scroll svg {
+  display: block;
+  min-width: 720px;
+  width: 100%;
+  height: auto;
+}
+
+.sankey-label {
+  font-size: 11px;
+  fill: var(--fg);
+}
+
+.sankey-hub-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--accent-fg);
+}
+
+.budget-note {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.budget-note summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.budget-note p {
+  margin-top: 8px;
+}
+
+.budget-tables {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.budget-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.budget-table caption {
+  text-align: left;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.budget-table th,
+.budget-table td {
+  text-align: left;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.budget-table td:last-child,
+.budget-table th:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.budget-table-total td {
+  font-weight: 700;
+  border-top: 2px solid var(--border);
+  border-bottom: none;
+}
+
+.budget-source {
+  font-size: 0.8rem;
+}
