@@ -6,6 +6,15 @@ import type { WardResult } from "./lib/types";
 
 const CIVIC_BODIES = ["GHMC", "CMC", "MMC"] as const;
 
+// Spelled out wherever the abbreviations are shown -- MMC (Malkajgiri) and
+// CMC (Cyberabad) are new as of the Feb 2026 trifurcation and easy to
+// confuse with each other.
+const CIVIC_BODY_NAMES: Record<string, string> = {
+  GHMC: "Greater Hyderabad Municipal Corporation",
+  CMC: "Cyberabad Municipal Corporation",
+  MMC: "Malkajgiri Municipal Corporation",
+};
+
 function representationSentence(r: WardResult): string {
   const corp =
     r.corporator_status === "vacant"
@@ -70,8 +79,8 @@ export default function WardPage() {
   return (
     <div className="ward-lookup">
       <p className="muted">
-        Browse or search the current 300-ward structure (GHMC / CMC / MMC).
-        No fund or works data yet — see{" "}
+        Browse or search the current 300-ward structure across Hyderabad&apos;s
+        three municipal corporations. No fund or works data yet — see{" "}
         <a
           href="https://github.com/chill-guy-1234/ward-watch#extraction-phase-3"
           target="_blank"
@@ -82,12 +91,22 @@ export default function WardPage() {
         . Have a question instead? Use the chat bubble in the corner.
       </p>
 
+      <dl className="body-glossary">
+        {CIVIC_BODIES.map((b) => (
+          <div key={b}>
+            <dt>{b}</dt>
+            <dd>{CIVIC_BODY_NAMES[b]}</dd>
+          </div>
+        ))}
+      </dl>
+
       <div className="body-filter">
         {["All", ...CIVIC_BODIES].map((b) => (
           <button
             key={b}
             className={`body-filter-btn${bodyFilter === b ? " active" : ""}`}
             onClick={() => setBodyFilter(b)}
+            title={CIVIC_BODY_NAMES[b] ?? "All three corporations"}
           >
             {b}
             {b !== "All" && allWards
@@ -121,7 +140,9 @@ export default function WardPage() {
                 <strong>
                   Ward {r.ward_number} — {r.ward_name}
                 </strong>
-                <span className="muted">{r.civic_body}</span>
+                <span className="muted" title={CIVIC_BODY_NAMES[r.civic_body]}>
+                  {r.civic_body}
+                </span>
               </div>
               <p className="muted">
                 {r.zone ?? "unknown zone"} zone · {r.circle ?? "unknown circle"}{" "}
@@ -145,7 +166,11 @@ export default function WardPage() {
           return (
             <details key={body} className="ward-group" open={bodyFilter !== "All"}>
               <summary className="ward-group-summary">
-                {body} — {wards.length} wards
+                {body}{" "}
+                <span className="muted ward-group-fullname">
+                  {CIVIC_BODY_NAMES[body]}
+                </span>{" "}
+                — {wards.length} wards
               </summary>
               <p className="muted ward-group-note">
                 {groupRepresentationSentence(wards)}

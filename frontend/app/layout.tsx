@@ -17,9 +17,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <div className="shell">
           <Nav />
           <div className="banner">
-            GHMC, CMC and MMC are currently run by appointed Special
-            Officers — councils&apos; terms ended and no election date is
-            confirmed yet.
+            Hyderabad&apos;s three municipal corporations — GHMC (Greater
+            Hyderabad), CMC (Cyberabad) and MMC (Malkajgiri) — are currently
+            run by appointed Special Officers; councils&apos; terms ended and
+            no election date is confirmed yet.
           </div>
           <main className="main">{children}</main>
         </div>

@@ -4,8 +4,24 @@ export default function AboutPage() {
       <h1>About Ward Watch</h1>
       <p>
         Ward Watch is a civic-accountability tracker for Hyderabad — an
-        attempt to make GHMC/CMC/MMC budgets, documents, and representation
-        status as easy to check as a flight status board.
+        attempt to make budgets, documents, and representation status as
+        easy to check as a flight status board, across the city&apos;s three
+        municipal corporations:
+      </p>
+      <ul>
+        <li>
+          <strong>GHMC</strong> — Greater Hyderabad Municipal Corporation
+        </li>
+        <li>
+          <strong>CMC</strong> — Cyberabad Municipal Corporation
+        </li>
+        <li>
+          <strong>MMC</strong> — Malkajgiri Municipal Corporation
+        </li>
+      </ul>
+      <p>
+        All three were carved out of a single, larger GHMC on 11 Feb 2026 —
+        see &quot;Civic status&quot; below for what that means today.
       </p>
 
       <h2>What&apos;s real here</h2>

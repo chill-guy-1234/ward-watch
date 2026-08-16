@@ -410,6 +410,28 @@ input {
   max-width: 960px;
 }
 
+.body-glossary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  font-size: 0.82rem;
+}
+
+.body-glossary dt {
+  display: inline;
+  font-weight: 700;
+}
+
+.body-glossary dd {
+  display: inline;
+  margin-left: 4px;
+  color: var(--muted);
+}
+
+.body-glossary div {
+  white-space: nowrap;
+}
+
 .body-filter {
   display: flex;
   gap: 8px;
@@ -442,6 +464,11 @@ input {
 .ward-group-summary {
   cursor: pointer;
   font-weight: 600;
+}
+
+.ward-group-fullname {
+  font-weight: 400;
+  font-size: 0.82rem;
 }
 
 .ward-group-note {
@@ -486,6 +513,13 @@ input {
 .about h2 {
   font-size: 1rem;
   margin-top: 8px;
+}
+
+.about ul {
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 /* ---- transport map ---- */
