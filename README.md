@@ -130,6 +130,20 @@ the returned `history` on the next call to continue the conversation (the
 Lambda has no memory between invocations). Details in
 `docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 3b.
 
+### Deployed ward lookup endpoint
+
+A second public Lambda searches the 300-ward structure seeded in V8/V9:
+
+```
+GET https://bb523lbg7ub77ksjojsbb5fhsm0fooht.lambda-url.us-east-1.on.aws/?q=95
+GET https://bb523lbg7ub77ksjojsbb5fhsm0fooht.lambda-url.us-east-1.on.aws/?q=jubilee
+```
+
+`q` is either an exact ward number or a case-insensitive substring match on
+ward name. Returns up to 20 matches, each with zone, circle, civic body, and
+`corporator_status`/`civic_body_status` straight from the `office` table —
+no fund/works data (still unreliable, see the extraction caveat above).
+
 ## How the RAG pipeline works
 
 ```

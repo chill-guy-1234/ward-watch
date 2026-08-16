@@ -1,0 +1,5 @@
+{
+  "AllowOrigins": ["*"],
+  "AllowMethods": ["GET"],
+  "AllowHeaders": ["content-type"]
+}
