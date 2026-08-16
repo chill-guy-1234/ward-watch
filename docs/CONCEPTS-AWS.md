@@ -218,3 +218,53 @@ tells Amplify `appRoot: frontend` (build from that subdirectory) and
 `baseDirectory: out` (that's where the static files land after
 `next build`). If this file didn't exist, Amplify's auto-detection would
 look for a Next.js app at the repo root and find nothing.
+
+---
+
+## Part 7 — Lambda cold starts and how long a function stays warm
+
+Two separate clocks, easy to conflate:
+
+**1. Cold start — time to serve the *first* request.** When there's no warm
+copy of a function sitting around, AWS provisions one from scratch: pulls
+the container image (cached after first use, not re-pulled from ECR every
+time), starts the runtime, then runs everything at *module scope* — for our
+Lambdas that's `db.py`'s `load_dotenv`, `embeddings.py`'s
+`boto3.client(...)` construction, etc. CloudWatch logs this separately as
+**Init Duration**, distinct from the handler's own execution time. Measured
+on `wardwatch-wardlookup` during testing:
+
+```
+Init Duration: 515.66 ms
+```
+
+Half a second, on a small function (256MB, few dependencies).
+`wardwatch-chatbot` (512MB, heavier deps: psycopg + pgvector +
+boto3 bedrock-runtime) cold-starts somewhat slower but still comfortably
+under 1-2 seconds — nowhere near the multi-second cold starts VPC-attached
+Lambdas used to suffer from ENI provisioning. All three of our functions
+show `VpcConfig: null` (`aws lambda get-function-configuration`), which
+means that tax doesn't apply here — a side benefit of the Option A public
+networking choice from Part 1, made for cost reasons, not this.
+
+**2. Warm lifetime — how long an idle environment survives before being
+recycled.** AWS publishes no guaranteed number here, but it's empirically
+roughly **5-15 minutes** of inactivity. While warm, a new request reuses the
+same environment and skips Init entirely — that's why the *second*
+invocation in a quick burst is fast (Duration only, no Init Duration in the
+log). If requests arrive faster than one warm environment can handle,
+Lambda spins up *additional parallel* environments (each cold) rather than
+queuing — scaling is horizontal, not a queue.
+
+**Forcing zero cold starts** is possible via **Provisioned Concurrency**
+(keeps N environments permanently warm), but it costs money continuously
+even when idle — directly opposed to the "scale to near-zero when idle"
+design goal from the handover doc. Not configured anywhere in this project,
+on purpose.
+
+**Don't confuse this with per-invocation timeout** (`Timeout` in
+`get-function-configuration` — 30s/60s/15s for healthcheck/chatbot/
+wardlookup respectively): that's a hard cap on *one request's* execution
+time, unrelated to how long the environment stays warm between requests.
+The chatbot's 60s timeout is mostly headroom for DeepSeek R1's actual
+reasoning time, not cold start — cold start adds well under a second on top.
