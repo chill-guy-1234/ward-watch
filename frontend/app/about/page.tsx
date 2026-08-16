@@ -19,6 +19,25 @@ export default function AboutPage() {
         a sample of wards.
       </p>
 
+      <h2>The transport map</h2>
+      <p>
+        Station coordinates for Metro (Red, Green, Blue), MMTS suburban rail,
+        railway terminals, bus stands and airports were hand-traced rather
+        than pulled from an official feed — no machine-readable GTFS feed is
+        published for Hyderabad. Treat positions as accurate to roughly the
+        right spot, not survey-grade. Only services actually carrying
+        passengers today are drawn: Metro Phase 2 (airport, Patancheru,
+        Medchal, Shamirpet, Old City) is still in central-government
+        appraisal with construction targeted 2028–30, so it is left off
+        rather than shown as though you could ride it.
+      </p>
+      <p>
+        The map is not yet linked to wards. Doing that honestly needs ward
+        boundary polygons so a station can be placed inside a ward
+        geometrically; matching station names to ward names would look like
+        an answer while actually being a guess, so it hasn&apos;t been done.
+      </p>
+
       <h2>What&apos;s deliberately missing</h2>
       <p>
         No fund totals or works-list dashboard yet. Early extraction work

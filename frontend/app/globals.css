@@ -1,34 +1,38 @@
-/* Hyderabad palette: golden yellow (Charminar limestone, marigold) is the
-   MAJORITY color -- background, cards, most of the screen. Brown (Deccani
-   sandstone/brick) is the MINORITY color -- text, buttons, borders, the
-   floating chat bubble. Dark mode keeps the same gold-majority relationship,
-   just deepened for low-light viewing, rather than flipping to a
-   brown-dominant scheme. */
+/* Hyderabad palette: golden yellow reads as the dominant colour, brown as
+   the accent -- but SATURATION is kept off large surfaces. A full page of
+   #f6c445 marigold with brown text was unreadable; big fields get the soft
+   gold below, and the saturated marigold is spent on small elements
+   (buttons, active chips, the chat bubble) where it actually pops.
+   Every text/background pair below clears WCAG AA:
+     fg on bg          12.9:1      muted on bg      7.0:1
+     accent-fg on accent 7.1:1     fg on surface    12.0:1 */
 :root {
-  --bg: #f6c445;
-  --fg: #3b2412;
-  --muted: #7a5230;
-  --border: #caa04a;
-  --surface: #fae29a;
-  --accent: #6b4023;
-  --accent-fg: #fff3dc;
-  --banner-bg: #f0b93a;
-  --banner-border: #b8791e;
+  --bg: #fdf0cd;
+  --fg: #3a2410;
+  --muted: #6b4a2a;
+  --border: #e0c485;
+  --surface: #f8e4b0;
+  --accent: #d9a021;
+  --accent-fg: #2e1c0b;
+  --accent-strong: #6b4a2a;
+  --banner-bg: #f8e4b0;
+  --banner-border: #d9a021;
   --radius: 8px;
   --max-width: 720px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #8a6220;
-    --fg: #fbefd2;
-    --muted: #e3c688;
-    --border: #6b4a18;
-    --surface: #7a5518;
-    --accent: #3b2412;
-    --accent-fg: #fbefd2;
-    --banner-bg: #6b4a18;
-    --banner-border: #4a3210;
+    --bg: #241a0d;
+    --fg: #fbeccb;
+    --muted: #d3b688;
+    --border: #4d3a1c;
+    --surface: #33260f;
+    --accent: #e0aa2e;
+    --accent-fg: #241a0d;
+    --accent-strong: #f0d9a0;
+    --banner-bg: #33260f;
+    --banner-border: #7a5a20;
   }
   html {
     color-scheme: dark;
@@ -87,6 +91,17 @@ input {
   background-repeat: no-repeat;
   background-position: bottom center;
   background-size: min(1100px, 100vw) auto;
+  opacity: 0.75;
+}
+
+/* The silhouette is drawn in dark brown, which would disappear against the
+   dark background -- invert it to a pale wash instead of shipping a second
+   SVG. */
+@media (prefers-color-scheme: dark) {
+  .bg-art {
+    filter: invert(1);
+    opacity: 0.14;
+  }
 }
 
 .shell {
@@ -164,7 +179,7 @@ input {
 }
 
 .text-input:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--accent-strong);
   outline-offset: -1px;
 }
 
@@ -471,4 +486,101 @@ input {
 .about h2 {
   font-size: 1rem;
   margin-top: 8px;
+}
+
+/* ---- transport map ---- */
+
+.main:has(.transport) {
+  max-width: 1200px;
+  flex: 1;
+  min-height: 0;
+}
+
+.transport-intro {
+  margin-bottom: 12px;
+  font-size: 0.9rem;
+}
+
+.transport {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+  min-height: 0;
+}
+
+.transport-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.transport-filter-btn {
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.transport-map-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.transport-map {
+  height: 100%;
+  width: 100%;
+}
+
+/* Leaflet paints its own controls/tooltips; keep them on our palette */
+.leaflet-container {
+  background: var(--surface);
+  font: inherit;
+}
+
+.transport-info {
+  position: absolute;
+  z-index: 500;
+  top: 12px;
+  right: 12px;
+  width: min(280px, calc(100% - 24px));
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.transport-info-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.transport-badge {
+  align-self: flex-start;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 2px 10px;
+  font-size: 0.75rem;
+}
+
+/* On a phone the floating card covers the map -- dock it to the bottom */
+@media (max-width: 640px) {
+  .transport-info {
+    top: auto;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
 }

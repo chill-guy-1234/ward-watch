@@ -157,10 +157,20 @@ npm run dev       # http://localhost:3000, calls the deployed Lambdas directly
 npm run build     # static export to frontend/out/ (next.config.ts: output: 'export')
 ```
 
-Three routes: chat (`/`), ward lookup (`/ward`), about (`/about`). No SSR,
-no API routes — plain client-side `fetch` to the public Function URLs, so
-Amplify Hosting only ever serves static files. Deployment is a one-time
-console step (GitHub OAuth) — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 4.
+Three routes: ward lookup (`/`), transport map (`/transport`), about
+(`/about`), plus the chatbot as a floating bubble available on every page.
+No SSR, no API routes — plain client-side `fetch` to the public Function
+URLs, so Amplify Hosting only ever serves static files. Deployment is a
+one-time console step (GitHub OAuth) — see
+`docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 4.
+
+The transport map (`app/transport/`) is the one page with no backend at
+all: coordinates are a static, hand-traced dataset in `data.ts` (no GTFS
+feed exists for Hyderabad), rendered with Leaflet on CARTO/OSM tiles.
+Leaflet is loaded via `next/dynamic` with `ssr: false` — it touches
+`window` at import time and would otherwise crash the static export's
+prerender pass. Only services carrying passengers today are drawn; Metro
+Phase 2 is excluded while it remains unapproved.
 
 ## How the RAG pipeline works
 
