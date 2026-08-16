@@ -1,182 +1,169 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { askChatbot } from "./lib/api";
-import type { ChatHistoryTurn, ChatMessage } from "./lib/types";
+import { useEffect, useMemo, useState } from "react";
+import { listAllWards } from "./lib/api";
+import type { WardResult } from "./lib/types";
 
-const STORAGE_KEY = "wardwatch-chat";
+const CIVIC_BODIES = ["GHMC", "CMC", "MMC"] as const;
 
-const STARTER_QUESTIONS = [
-  "What is GHMC's total budget for 2025-26?",
-  "What changed when GHMC was trifurcated into GHMC, CMC and MMC?",
-  "How much was spent on street lighting?",
-];
+function representationSentence(r: WardResult): string {
+  const corp =
+    r.corporator_status === "vacant"
+      ? "No elected corporator for this ward."
+      : r.corporator_status === "elected"
+        ? "This ward has an elected corporator."
+        : "Corporator status not on record.";
 
-// A DeepSeek R1 answer can genuinely take 30-45s -- this is an honest wait
-// indicator, not a fake progress bar, so it changes message rather than
-// pretending to track real progress.
-const LOADING_MESSAGES: [number, string][] = [
-  [0, "Searching ingested civic documents…"],
-  [8, "Reading the retrieved excerpts…"],
-  [20, "Still working — the reasoning model can take up to a minute…"],
-];
+  const body =
+    r.civic_body_status === "special_officer"
+      ? `${r.civic_body} is currently administered by an appointed Special Officer — councils' terms have ended and no election date is confirmed.`
+      : r.civic_body_status === "elected"
+        ? `${r.civic_body} has an elected council in place.`
+        : `${r.civic_body}'s administrative status is not on record.`;
 
-export default function ChatPage() {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [history, setHistory] = useState<ChatHistoryTurn[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  return `${corp} ${body}`;
+}
+
+// One representation sentence per civic body, since it's currently
+// identical for every ward inside that body -- repeating it 150 times in a
+// browse list would be noise, not information.
+function groupRepresentationSentence(wards: WardResult[]): string {
+  return wards[0] ? representationSentence(wards[0]) : "";
+}
+
+export default function WardPage() {
+  const [allWards, setAllWards] = useState<WardResult[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [bodyFilter, setBodyFilter] = useState<string>("All");
 
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      setMessages(parsed.messages ?? []);
-      setHistory(parsed.history ?? []);
-    }
+    listAllWards()
+      .then(setAllWards)
+      .catch((err) =>
+        setLoadError(err instanceof Error ? err.message : "Failed to load wards")
+      );
   }, []);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+  const filtered = useMemo(() => {
+    if (!allWards) return [];
+    const q = query.trim().toLowerCase();
+    return allWards.filter((w) => {
+      const matchesBody = bodyFilter === "All" || w.civic_body === bodyFilter;
+      const matchesQuery =
+        !q ||
+        w.ward_name.toLowerCase().includes(q) ||
+        String(w.ward_number).includes(q);
+      return matchesBody && matchesQuery;
+    });
+  }, [allWards, query, bodyFilter]);
 
-  useEffect(() => {
-    if (!loading) {
-      setElapsed(0);
-      return;
-    }
-    const timer = setInterval(() => setElapsed((s) => s + 1), 1000);
-    return () => clearInterval(timer);
-  }, [loading]);
+  const isSearching = query.trim().length > 0;
 
-  function persist(nextMessages: ChatMessage[], nextHistory: ChatHistoryTurn[]) {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ messages: nextMessages, history: nextHistory })
-    );
-  }
-
-  async function send(question: string) {
-    const q = question.trim();
-    if (!q || loading) return;
-
-    const withUser = [...messages, { role: "user" as const, text: q }];
-    setMessages(withUser);
-    setInput("");
-    setLoading(true);
-
-    try {
-      const res = await askChatbot(q, history);
-      const withAnswer = [
-        ...withUser,
-        { role: "assistant" as const, text: res.answer, sources: res.sources },
-      ];
-      setMessages(withAnswer);
-      setHistory(res.history);
-      persist(withAnswer, res.history);
-    } catch (err) {
-      const withError = [
-        ...withUser,
-        {
-          role: "assistant" as const,
-          text: `Something went wrong reaching Ward Watch: ${
-            err instanceof Error ? err.message : "unknown error"
-          }`,
-        },
-      ];
-      setMessages(withError);
-      persist(withError, history);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const loadingText = [...LOADING_MESSAGES]
-    .reverse()
-    .find(([t]) => elapsed >= t)?.[1];
+  const grouped = useMemo(() => {
+    const map = new Map<string, WardResult[]>();
+    for (const body of CIVIC_BODIES) map.set(body, []);
+    for (const w of filtered) map.get(w.civic_body)?.push(w);
+    return map;
+  }, [filtered]);
 
   return (
-    <div className="chat">
-      {messages.length === 0 && (
-        <div className="starter-block">
-          <p className="muted">
-            Ask about Hyderabad&apos;s civic budget and documents ingested so
-            far. Answers cite the excerpt they came from — tap a citation to
-            read it.
-          </p>
-          <div className="starter-questions">
-            {STARTER_QUESTIONS.map((q) => (
-              <button key={q} className="button-ghost" onClick={() => send(q)}>
-                {q}
-              </button>
-            ))}
-          </div>
+    <div className="ward-lookup">
+      <p className="muted">
+        Browse or search the current 300-ward structure (GHMC / CMC / MMC).
+        No fund or works data yet — see{" "}
+        <a
+          href="https://github.com/chill-guy-1234/ward-watch#extraction-phase-3"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          why
+        </a>
+        . Have a question instead? Use the chat bubble in the corner.
+      </p>
+
+      <div className="body-filter">
+        {["All", ...CIVIC_BODIES].map((b) => (
+          <button
+            key={b}
+            className={`body-filter-btn${bodyFilter === b ? " active" : ""}`}
+            onClick={() => setBodyFilter(b)}
+          >
+            {b}
+            {b !== "All" && allWards
+              ? ` (${allWards.filter((w) => w.civic_body === b).length})`
+              : ""}
+          </button>
+        ))}
+      </div>
+
+      <input
+        className="text-input"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Filter by ward number or name, e.g. 95 or Jubilee Hills"
+      />
+
+      {loadError && <p className="muted">{loadError}</p>}
+      {!allWards && !loadError && <p className="muted">Loading wards…</p>}
+
+      {allWards && filtered.length === 0 && (
+        <p className="muted">No wards matched.</p>
+      )}
+
+      {/* Searching (or a single body already isolates the sentence) shows
+          full detail per ward -- that's the "find MY ward" use case. */}
+      {isSearching && (
+        <div className="ward-results">
+          {filtered.map((r) => (
+            <div key={r.ward_number} className="card ward-card">
+              <div className="ward-card-head">
+                <strong>
+                  Ward {r.ward_number} — {r.ward_name}
+                </strong>
+                <span className="muted">{r.civic_body}</span>
+              </div>
+              <p className="muted">
+                {r.zone ?? "unknown zone"} zone · {r.circle ?? "unknown circle"}{" "}
+                circle
+              </p>
+              <p>{representationSentence(r)}</p>
+            </div>
+          ))}
         </div>
       )}
 
-      <div className="messages">
-        {messages.map((m, i) => (
-          <div key={i} className={`msg msg-${m.role}`}>
-            <div className="msg-text">{m.text}</div>
-            {m.sources && m.sources.length > 0 && (
-              <div className="sources">
-                {m.sources.map((s, si) => {
-                  const key = `${i}-${si}`;
-                  const isOpen = expanded === key;
-                  return (
-                    <div key={key} className="source-item">
-                      <button
-                        className="source-chip"
-                        onClick={() => setExpanded(isOpen ? null : key)}
-                      >
-                        [{si + 1}] {s.title}
-                        {s.page ? `, p.${s.page}` : ""}
-                      </button>
-                      {isOpen && (
-                        <div className="source-excerpt">
-                          <p className="muted">
-                            {s.publisher}
-                            {s.page ? ` · page ${s.page}` : ""}
-                          </p>
-                          <p>{s.excerpt}</p>
-                        </div>
-                      )}
+      {/* Browsing (no text filter): grouped, collapsible, compact -- 300
+          rows of repeated detail would defeat "minimalistic." */}
+      {!isSearching &&
+        allWards &&
+        CIVIC_BODIES.filter(
+          (body) => bodyFilter === "All" || bodyFilter === body
+        ).map((body) => {
+          const wards = grouped.get(body) ?? [];
+          if (wards.length === 0) return null;
+          return (
+            <details key={body} className="ward-group" open={bodyFilter !== "All"}>
+              <summary className="ward-group-summary">
+                {body} — {wards.length} wards
+              </summary>
+              <p className="muted ward-group-note">
+                {groupRepresentationSentence(wards)}
+              </p>
+              <div className="ward-grid">
+                {wards.map((w) => (
+                  <div key={w.ward_number} className="ward-grid-item">
+                    <span className="ward-grid-number">{w.ward_number}</span>{" "}
+                    <span>{w.ward_name}</span>
+                    <div className="muted ward-grid-sub">
+                      {w.zone ?? "—"} · {w.circle ?? "—"}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
-            )}
-          </div>
-        ))}
-        {loading && (
-          <div className="msg msg-assistant">
-            <div className="msg-text muted">{loadingText}</div>
-          </div>
-        )}
-        <div ref={bottomRef} />
-      </div>
-
-      <form
-        className="chat-form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          send(input);
-        }}
-      >
-        <input
-          className="text-input"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask a question…"
-          disabled={loading}
-        />
-        <button className="button" type="submit" disabled={loading || !input.trim()}>
-          Send
-        </button>
-      </form>
+            </details>
+          );
+        })}
     </div>
   );
 }

@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300" role="presentation" aria-hidden="true">
+  <!-- Stylized Charminar silhouette -- decorative art, not a photo or a
+       literal architectural rendering. -->
+  <g fill="#3b2412" fill-opacity="0.16">
+    <!-- plinth -->
+    <rect x="30" y="278" width="340" height="12" rx="2" />
+
+    <!-- left minaret -->
+    <path d="M56,280 L56,155 Q70,142 84,155 L84,280 Z" />
+    <rect x="64" y="134" width="12" height="18" />
+    <ellipse cx="70" cy="150" rx="17" ry="13" />
+    <line x1="70" y1="134" x2="70" y2="105" stroke="#3b2412" stroke-width="3" />
+    <circle cx="70" cy="102" r="4" />
+
+    <!-- right minaret -->
+    <path d="M316,280 L316,155 Q330,142 344,155 L344,280 Z" />
+    <rect x="324" y="134" width="12" height="18" />
+    <ellipse cx="330" cy="150" rx="17" ry="13" />
+    <line x1="330" y1="134" x2="330" y2="105" stroke="#3b2412" stroke-width="3" />
+    <circle cx="330" cy="102" r="4" />
+
+    <!-- central block with an arched opening cut out -->
+    <path
+      fill-rule="evenodd"
+      d="M150,170 H250 V280 H150 Z M172,280 V238 Q172,206 200,206 Q228,206 228,238 V280 Z"
+    />
+
+    <!-- roof corner cupolas -->
+    <rect x="160" y="176" width="10" height="10" />
+    <circle cx="165" cy="172" r="7" />
+    <rect x="230" y="176" width="10" height="10" />
+    <circle cx="235" cy="172" r="7" />
+
+    <!-- central dome -->
+    <rect x="185" y="150" width="30" height="22" />
+    <ellipse cx="200" cy="148" rx="32" ry="24" />
+    <line x1="200" y1="124" x2="200" y2="95" stroke="#3b2412" stroke-width="4" />
+    <circle cx="200" cy="92" r="5.5" />
+  </g>
+</svg>
