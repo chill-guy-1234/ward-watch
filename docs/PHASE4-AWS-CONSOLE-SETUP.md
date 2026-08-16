@@ -1,0 +1,159 @@
+# Phase 4 — AWS Console Setup (Aurora, Lambda, Amplify)
+
+Step-by-step console instructions for the remaining Phase 4 infrastructure.
+CLI-driven setup for this stage kept hitting PowerShell string-escaping bugs
+(the secret value below was one), so this stage is console-first — reliable,
+and it's the same skills you'll need for any AWS project.
+
+**Region: always `us-east-1` (N. Virginia)** — check the top-right selector on
+every page. Bedrock, and now Aurora, are pinned there.
+
+---
+
+## Already done (via CLI, verified)
+
+You don't need to redo these — just know they exist:
+
+| Resource | Name | Purpose |
+|---|---|---|
+| Secrets Manager secret | `wardwatch/aurora-master` | Aurora master username + a generated 32-char password. **Never appears in any file** — Aurora and Lambda will read it directly. |
+| RDS subnet group | `wardwatch-subnets` | 3 subnets (different AZs) in the default VPC, required for Aurora placement. |
+
+You can eyeball the secret (metadata only, not the password) at:
+Secrets Manager console → Secrets → `wardwatch/aurora-master`.
+
+---
+
+## Stage 1 — Create the Aurora Serverless v2 cluster
+
+**RDS console → Databases → Create database**
+
+| Field | Value | Why |
+|---|---|---|
+| Choose a database creation method | Standard create | Gives full control over serverless scaling |
+| Engine type | Aurora (PostgreSQL Compatible) | pgvector needs Postgres |
+| Engine version | Aurora PostgreSQL 16.x (latest 16) | Matches your local `pgvector/pgvector:pg16` |
+| Templates | **Dev/Test** | Skips Multi-AZ by default — cheaper, fine for this project |
+| DB cluster identifier | `wardwatch-cluster` | |
+| Credentials management | **Self managed** | |
+| Master username | `wardwatch_admin` | Must match the Secrets Manager secret |
+| Master password | Toggle **"Manage master credentials in AWS Secrets Manager"** if offered, otherwise open the secret above and copy the password in manually | Either way, the *running* password ends up identical to what's in Secrets Manager |
+| DB instance class | **Serverless v2** | The whole point — scales to near-zero when idle |
+| Capacity range | Min **0.5** ACU, Max **2** ACU | 0.5 ACU is the practical floor; keeps this cheap while idle |
+| Multi-AZ deployment | No | Not needed for a dev project |
+| Virtual private cloud (VPC) | The default VPC | Same one the subnet group uses |
+| DB subnet group | `wardwatch-subnets` | Created via CLI already |
+| Public access | **Yes** | You need to reach it from your laptop (DBeaver, Flyway) without a VPN. Access is still gated by the security group below. |
+| VPC security group | Create new → name it `wardwatch-db-sg` | |
+| Additional configuration → Initial database name | `wardwatch` | Matches local setup |
+
+Click **Create database**. Provisioning takes 5–10 minutes — you can move to Stage 2 while it spins up.
+
+### Open the firewall to your IP only
+
+Aurora is public but the security group blocks everything by default — good, but you need one hole for yourself:
+
+1. EC2 console → Security Groups → `wardwatch-db-sg`
+2. Inbound rules → Edit inbound rules → Add rule
+3. Type: **PostgreSQL** (auto-fills port 5432) · Source: **My IP** (the console fills in your current IP)
+4. Save
+
+If your ISP gives you a new IP later and DBeaver/Flyway suddenly can't connect, this rule is the first thing to check — re-add your new IP the same way.
+
+---
+
+## Stage 2 — Point Flyway and DBeaver at Aurora
+
+Once the cluster shows **Available** (RDS console → Databases → `wardwatch-cluster`):
+
+1. Copy the **writer endpoint** — RDS console → `wardwatch-cluster` → Connectivity & security tab. Looks like `wardwatch-cluster.cluster-xxxxx.us-east-1.rds.amazonaws.com`.
+2. Get the real password: Secrets Manager → `wardwatch/aurora-master` → **Retrieve secret value**.
+3. Update `.env` (do **not** commit — it's already gitignored) with a second URL, e.g.:
+   ```
+   WARDWATCH_AURORA_URL=postgresql://wardwatch_admin:<password>@<endpoint>:5432/wardwatch
+   ```
+4. Enable pgvector on Aurora — connect with `psql` or DBeaver using the values above, then run:
+   ```sql
+   CREATE EXTENSION vector;
+   ```
+5. Run Flyway against Aurora instead of the local container:
+   ```powershell
+   docker run --rm -v ${PWD}/db/migrations:/flyway/sql:ro flyway/flyway:10 `
+     -url="jdbc:postgresql://<endpoint>:5432/wardwatch" `
+     -user="wardwatch_admin" -password="<password>" migrate
+   ```
+   All 7 migrations (V1–V7) should apply cleanly — same SQL, same order, proving the schema work was genuinely portable, not laptop-specific.
+6. In DBeaver: New Connection → PostgreSQL → host = the endpoint, port 5432, database `wardwatch`, user `wardwatch_admin`, password from the secret.
+
+**Sanity check** once connected: `SELECT count(*) FROM civic_body;` should return 3.
+
+---
+
+## Stage 3 — Lambda — DONE (healthcheck function)
+
+Built and deployed via CLI: `wardwatch-healthcheck`, a container-image Lambda
+proving the full connectivity chain (IAM role → Secrets Manager → Aurora →
+Bedrock) works. Not the real ingestion pipeline yet — see `lambda/healthcheck/`
+for the code and `Known issues hit` below for what tripped during setup.
+
+**Verified invoke result:**
+```json
+{"db_reachable": true, "document_chunk_rows": 0, "bedrock_reachable": true, "embedding_dims": 1024}
+```
+(`document_chunk_rows: 0` is correct — Aurora's schema is migrated but not yet
+ingested into; only local Postgres has data so far.)
+
+**Resources created:**
+
+| Resource | Name/ARN |
+|---|---|
+| ECR repository | `230802932766.dkr.ecr.us-east-1.amazonaws.com/wardwatch-healthcheck` |
+| IAM role | `wardwatch-healthcheck-role` — attached: `AWSLambdaBasicExecutionRole` (CloudWatch Logs) + inline `wardwatch-secrets-and-bedrock` (read ONLY the `wardwatch/aurora-master` secret, invoke ONLY the Nova embeddings model — least privilege) |
+| Lambda function | `wardwatch-healthcheck`, 512MB/30s timeout, x86_64 |
+
+**Known issues hit while building this (useful if you build the next Lambda solo):**
+
+1. `docker login --password-stdin` piped directly from `aws ecr get-login-password`
+   failed with a 400 in PowerShell (password got mangled crossing the pipe).
+   Fix: capture the token in a variable first (`$token = (aws ecr
+   get-login-password ...).Trim()`), then pass it explicitly.
+2. **Docker's default build produces a multi-arch OCI image index with a
+   provenance attestation manifest** — Lambda rejects this, it needs one plain
+   single-architecture image manifest. Fix: build with
+   `docker build --provenance=false --platform linux/amd64 ...`. Verify with
+   `aws ecr describe-images ... --query imageManifestMediaType` — you want
+   `application/vnd.oci.image.manifest.v1+json`, not `image.index.v1+json`.
+3. `AWS_REGION` is a **reserved** Lambda environment variable — Lambda sets it
+   automatically from the deploy region. Trying to set it yourself in
+   `--environment Variables={...}` fails with `InvalidParameterValueException`.
+   Our code already defaults to `us-east-1` when the var is unset, so it's
+   simply omitted from the custom vars.
+
+**Reusable pattern for the next Lambda** (the real ingestion function): same
+shape — Dockerfile copying in the relevant `pipeline/*.py` files, same IAM
+role pattern (new inline policy scoped to whatever that function actually
+touches), same build flags. `db.py`/`embeddings.py` are currently **duplicated**
+between `pipeline/` and `lambda/healthcheck/` (copied, not shared) — fine for
+one Lambda, worth turning into a Lambda Layer or shared package before a
+second or third function copies them too.
+
+---
+
+## Stage 4 — Amplify Hosting (frontend, later)
+
+Also deferred — there's no frontend code yet (handover doc specifies Next.js;
+we haven't started it). Once a minimal ward-lookup page exists:
+Amplify console → New app → Host web app → connect the GitHub repo → it
+auto-deploys on every push to `main`. Simple enough to do solo when we get there.
+
+---
+
+## Cost check while you work
+
+Aurora Serverless v2 bills per ACU-hour even at the 0.5 ACU floor — roughly
+$0.06/hour idle (~$1.50/day) plus storage. Small against your credits, but if
+you're pausing for a while, note the cluster **cannot be fully stopped** the
+way a normal RDS instance can — Aurora Serverless v2 clusters run continuously
+at the minimum capacity. If cost becomes a concern, the cluster can be deleted
+and recreated from the same Flyway migrations in a few minutes when you're
+ready to resume.

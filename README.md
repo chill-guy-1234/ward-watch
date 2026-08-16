@@ -7,6 +7,9 @@ ingested civic documents.
 
 Full brief: [`PROJECT_HANDOVER.md`](PROJECT_HANDOVER.md).
 Current civic-status research: [`docs/VERIFICATION-2026-08-15.md`](docs/VERIFICATION-2026-08-15.md).
+AWS concepts (VPC/subnets/security groups, Aurora, ECR vs ECS, how Lambda gets
+called from a UI): [`docs/CONCEPTS-AWS.md`](docs/CONCEPTS-AWS.md).
+Phase 4 console setup steps: [`docs/PHASE4-AWS-CONSOLE-SETUP.md`](docs/PHASE4-AWS-CONSOLE-SETUP.md).
 
 > ⚠️ Elections and fund confirmations move. Re-verify handover doc §4 and §11
 > before writing code that depends on them.
@@ -18,8 +21,8 @@ Current civic-status research: [`docs/VERIFICATION-2026-08-15.md`](docs/VERIFICA
 | 0 | Repo + civic-status verification pass | done |
 | 1 | Schema + static seed data (local Postgres) | done |
 | 2 | Ingestion + embeddings + RAG chatbot | done |
-| 3 | Extraction agent (documents → structured rows) | next |
-| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | |
+| 3 | Extraction agent (documents → structured rows) | built; fund totals unreliable, see note below |
+| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | Aurora + first Lambda live; Amplify pending — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` |
 | 5 | Step Functions orchestration, alerts, Election Watch Agent | |
 
 ## Layout
@@ -129,6 +132,38 @@ fetched. See `condense()` in `chat.py`.
 **History holds bare Q&A only** — retrieved excerpts are attached to the current
 question and never stored, so past turns' evidence isn't re-sent and re-billed
 on every call (~6000 tokens per turn if kept).
+
+## Extraction (Phase 3)
+
+`pipeline/extract.py` reads ingested chunks and emits typed rows — the mirror
+image of the chatbot. Run it per document:
+
+```powershell
+..\.venv\Scripts\python extract.py --doc-id 1              # whole document
+..\.venv\Scripts\python extract.py --doc-id 1 --limit 8    # cheap dry run
+```
+
+It is idempotent: a re-run clears that document's prior extractions first.
+
+> ⚠️ **Known limitation — do not `SUM()` `fund_allocation` for a city total.**
+> Three fixes landed (V3–V7: per-year spend history, location mentions,
+> canonical fiscal-year format, exact-duplicate dedup, `is_rollup` tagging for
+> subtotals/grand-totals) and each closed a real gap — but a 2025-26 total still
+> comes out ~5.4× the real ₹8,440 cr. Remaining cause: budget PDFs restate the
+> same figure under near-synonymous labels across a summary table, a schedule,
+> and a departmental annexure ("H-CITI GRANTS" / "Assistance to GHMC for
+> H-CITI"; "State Finance Commission Grant" / "STATE FINANCE COMMISSION
+> GRANTS" / "Revenue Grants – SFC Grants" — same ₹800cr, three spellings).
+> Exact-match dedup cannot catch this; a real fix needs either fuzzy/semantic
+> matching (risks false-positive merges of genuinely different schemes) or
+> restricting extraction to one canonical table per document instead of every
+> table — both bigger than a prompt fix, deliberately not attempted yet.
+>
+> **What IS reliable today:** individual scheme lookups (one row, e.g. "street
+> lighting allocation"), `is_rollup=false` filtering (removes subtotal/total
+> rows correctly), and the RAG chatbot (`chat.py`), which answers from cited
+> excerpts rather than a SQL aggregate. `work_item` rows are cleaner but
+> sparse — few carry an amount, and this budget PDF has no ward-level detail.
 
 ## Models
 
