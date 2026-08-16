@@ -1,11 +1,15 @@
-"""Ward lookup Lambda: search the current 300-ward structure by number or name.
+"""Ward lookup Lambda: search or list the current 300-ward structure.
 
 Same connectivity pattern as the other two Lambdas (IAM role -> Secrets
 Manager -> Aurora), fronted by a public GET Function URL. No Bedrock call
 here -- this is a plain structured lookup, not RAG.
 
-Query param `q`: an all-digit string matches ward_number exactly; anything
-else does a case-insensitive substring match on ward name.
+Query param `q`:
+  - omitted/empty -> lists all 300 current wards, grouped by civic body then
+    ward number (the frontend's "browse all wards" view groups client-side
+    off this ordering)
+  - all-digit string -> exact ward_number match
+  - anything else -> case-insensitive substring match on ward name
 
 Every result includes corporator_status and civic_body_status straight from
 the `office` table (V9/V2 seed) -- "vacant" is a real row, not an inferred
@@ -16,7 +20,7 @@ import json
 
 import db
 
-SEARCH_SQL = """
+FIELDS_SQL = """
     SELECT w.ward_number, w.name AS ward_name, z.name AS zone, c.name AS circle,
            cb.name AS civic_body, corp.status AS corporator_status,
            spec.status AS civic_body_status
@@ -29,25 +33,32 @@ SEARCH_SQL = """
     LEFT JOIN office spec ON spec.scope_type = 'civic_body' AND spec.scope_id = cb.id
                           AND spec.office_type = 'special_officer'
     WHERE w.valid_to IS NULL
+"""
+
+LIST_SQL = FIELDS_SQL + " ORDER BY cb.name, w.ward_number"
+
+SEARCH_SQL = (
+    FIELDS_SQL
+    + """
       AND ((%(num)s::int IS NOT NULL AND w.ward_number = %(num)s::int)
         OR (%(text)s::text IS NOT NULL AND w.name ILIKE %(text)s::text))
     ORDER BY w.ward_number
     LIMIT 20
 """
+)
 
 
 def handler(event, context):
     params = event.get("queryStringParameters") or {}
     q = (params.get("q") or "").strip()
 
-    if not q:
-        return _response(400, {"error": "q is required (ward number or name)"})
-
-    num = int(q) if q.isdigit() else None
-    text = None if q.isdigit() else f"%{q}%"
-
     with db.connect() as conn:
-        rows = conn.execute(SEARCH_SQL, {"num": num, "text": text}).fetchall()
+        if not q:
+            rows = conn.execute(LIST_SQL).fetchall()
+        else:
+            num = int(q) if q.isdigit() else None
+            text = None if q.isdigit() else f"%{q}%"
+            rows = conn.execute(SEARCH_SQL, {"num": num, "text": text}).fetchall()
 
     results = [
         {

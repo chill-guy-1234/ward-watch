@@ -28,12 +28,24 @@ export async function askChatbot(message: string, history: ChatHistoryTurn[]) {
   }>;
 }
 
-export async function lookupWard(q: string) {
-  const url = `${WARDLOOKUP_URL}?q=${encodeURIComponent(q)}`;
+async function wardRequest(q: string) {
+  const url = q ? `${WARDLOOKUP_URL}?q=${encodeURIComponent(q)}` : WARDLOOKUP_URL;
   const res = await fetch(url);
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
     throw new Error(body.error ?? `Lookup failed (${res.status})`);
   }
   return res.json() as Promise<{ query: string; results: WardResult[] }>;
+}
+
+export function lookupWard(q: string) {
+  return wardRequest(q);
+}
+
+// All 300 current wards, grouped by civic body then ward number (server
+// ordering) -- the ward browse page filters this client-side instead of
+// hitting the Lambda per keystroke.
+export async function listAllWards() {
+  const { results } = await wardRequest("");
+  return results;
 }
