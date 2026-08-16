@@ -140,8 +140,12 @@ Browser (Next.js on Amplify)
    <- renders in the UI
 ```
 
-Neither of these pieces exists yet — `wardwatch-healthcheck` currently has no
-public entry point; it's only invoked manually via `aws lambda invoke`.
+**Update:** this is now the live path. `wardwatch-chatbot` and
+`wardwatch-wardlookup` both have Function URLs (`AuthType: NONE`, open CORS)
+and the `frontend/` Next.js app calls them directly with plain `fetch()` —
+no API Gateway needed yet since each Lambda is a single route.
+`wardwatch-healthcheck` is the one exception, still invoke-only by design —
+it was always a wiring scaffold, not a UI-facing function (see Part 5).
 
 ---
 
@@ -172,3 +176,45 @@ using the site at all. Bundling everything into one Lambda would either force
 every scheduled run through request/response semantics it doesn't need, or
 force the UI-facing function to carry permissions (write access, external
 scraping) it has no business holding.
+
+---
+
+## Part 6 — Amplify Hosting (not the Amplify SDK)
+
+"Amplify" is two unrelated-in-practice things sharing a brand name — worth
+being precise about which one, because only one of them touches this project:
+
+- **Amplify Hosting** — what we actually use. A service that connects to a
+  GitHub repo, builds it on every push, and serves the output over HTTPS +
+  CDN. Mental model: AWS's answer to Netlify/Vercel — point it at a repo,
+  get a live URL, done.
+- **Amplify Framework/libraries** — client-side SDKs for auth, API calls,
+  storage inside a frontend app. **Not used here at all.** `frontend/` calls
+  the Lambda Function URLs with plain `fetch()`; there is no `aws-amplify`
+  package anywhere in its `package.json`.
+
+**Scope: frontend only.** Amplify Hosting has no idea Aurora, the Lambdas,
+or Bedrock exist — it only builds and serves `frontend/`. Everything it
+touches is downstream of `next build`.
+
+**Why this project needed zero server compute from Amplify:** `next.config.ts`
+sets `output: 'export'`, so `next build` produces plain static HTML/CSS/JS
+in `frontend/out/` — no Node server, no SSR, nothing to run. This was a
+deliberate choice, not a limitation: the backend already exists as public
+HTTP endpoints (the Function URLs from Part 4), so an SSR layer would only
+add a second, redundant place for the same request to fail. Amplify *can*
+run SSR Next.js apps (it detects `output: 'export'` vs. server mode and
+adjusts), but that machinery buys nothing when the API is already public.
+
+**The one manual step:** connecting the GitHub repo is an OAuth
+authorization (Amplify asks GitHub for read access + sets up a webhook) —
+this has to happen in a browser, console-first, same as Aurora's Stage 1
+setup in `PHASE4-AWS-CONSOLE-SETUP.md`. Every push to `main` after that is
+automatic — no manual deploy step, ever.
+
+**Where `amplify.yml` fits:** the repo root has an `amplify.yml` because
+`frontend/` is a subdirectory, not the repo root (a monorepo layout). It
+tells Amplify `appRoot: frontend` (build from that subdirectory) and
+`baseDirectory: out` (that's where the static files land after
+`next build`). If this file didn't exist, Amplify's auto-detection would
+look for a Next.js app at the repo root and find nothing.
