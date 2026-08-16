@@ -23,6 +23,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             no election date is confirmed yet.
           </div>
           <main className="main">{children}</main>
+          <footer className="footer">Made with ❤️ in Hyderabad, for Hyderabad</footer>
         </div>
         <ChatBubble />
       </body>
