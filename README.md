@@ -22,7 +22,7 @@ Phase 4 console setup steps: [`docs/PHASE4-AWS-CONSOLE-SETUP.md`](docs/PHASE4-AW
 | 1 | Schema + static seed data (local Postgres) | done |
 | 2 | Ingestion + embeddings + RAG chatbot | done |
 | 3 | Extraction agent (documents → structured rows) | built; fund totals unreliable, see note below |
-| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | Aurora + first Lambda live; Amplify pending — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` |
+| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | Aurora live (with ingested data) + 2 Lambdas live (`wardwatch-healthcheck`, public `wardwatch-chatbot`); Amplify pending — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` |
 | 5 | Step Functions orchestration, alerts, Election Watch Agent | |
 
 ## Layout
@@ -33,9 +33,19 @@ pipeline/          Python: ingestion + RAG
   db.py            Postgres connection + pgvector registration
   embeddings.py    Bedrock Nova embeddings — read the docstring for how
                    embeddings and cosine similarity actually work
+  chat_logic.py    the RAG loop itself (condense → retrieve → generate) —
+                   shared by chat.py (CLI) and lambda/chatbot (public API)
   ingest.py        extract → chunk → embed → store
-  chat.py          RAG loop: retrieve → ground → answer with citations
+  chat.py          terminal chatbot: thin CLI wrapper around chat_logic.py
   smoke_test.py    non-interactive end-to-end check
+lambda/            Deployed AWS Lambda functions (container images)
+  healthcheck/     proves the connectivity chain: IAM role → Secrets
+                   Manager → Aurora → Bedrock. Invoke-only, no public URL.
+  chatbot/         wraps chat_logic.py behind a public Function URL — the
+                   UI-facing endpoint a frontend will call directly
+  Both Dockerfiles build from the REPO ROOT (not their own directory) so
+  they COPY pipeline/db.py + embeddings.py directly — one copy of each,
+  no drift between what's deployed and what runs locally.
 data/raw/          source documents (gitignored — not code)
 docs/              research and verification notes
 ```
@@ -102,6 +112,23 @@ cd pipeline
 # Verify the whole pipeline still works
 ..\.venv\Scripts\python smoke_test.py
 ```
+
+### Deployed chatbot endpoint
+
+The same RAG loop is also live as a public Lambda, callable without any AWS
+credentials — this is what a future frontend will call:
+
+```
+POST https://xqknt4qdig7qifx7mcojdicamu0yiyoc.lambda-url.us-east-1.on.aws/
+Content-Type: application/json
+
+{"message": "What is the total budget for GHMC?", "history": []}
+```
+
+Returns `{"answer": "...", "sources": [...], "history": [...]}` — send back
+the returned `history` on the next call to continue the conversation (the
+Lambda has no memory between invocations). Details in
+`docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 3b.
 
 ## How the RAG pipeline works
 

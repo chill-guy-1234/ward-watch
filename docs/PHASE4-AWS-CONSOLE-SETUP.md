@@ -132,10 +132,69 @@ ingested into; only local Postgres has data so far.)
 **Reusable pattern for the next Lambda** (the real ingestion function): same
 shape — Dockerfile copying in the relevant `pipeline/*.py` files, same IAM
 role pattern (new inline policy scoped to whatever that function actually
-touches), same build flags. `db.py`/`embeddings.py` are currently **duplicated**
-between `pipeline/` and `lambda/healthcheck/` (copied, not shared) — fine for
-one Lambda, worth turning into a Lambda Layer or shared package before a
-second or third function copies them too.
+touches), same build flags.
+
+---
+
+## Stage 3b — Lambda — DONE (chatbot function, UI-facing)
+
+`wardwatch-chatbot` — wraps `pipeline/chat_logic.py` (the RAG loop extracted
+out of `chat.py` so the CLI and the Lambda share one implementation instead of
+three copies) behind a public Function URL with CORS. This is the first
+UI-facing function from `CONCEPTS-AWS.md` Part 5 — a browser can call it
+directly once a frontend exists.
+
+**De-duplication done at the same time:** `db.py`/`embeddings.py` were
+duplicated between `pipeline/` and `lambda/healthcheck/` (the note above
+flagged this). Both Lambdas' Dockerfiles now build from the **repo root** as
+build context (`docker build -f lambda/<name>/Dockerfile .`, not
+`lambda/<name>/`) and `COPY pipeline/db.py pipeline/embeddings.py ...`
+directly — one copy of each file, no drift risk. `lambda/healthcheck/db.py`
+and `embeddings.py` were deleted; `wardwatch-healthcheck` was rebuilt and
+redeployed from the new build context and re-verified working.
+
+**Request/response contract:**
+```
+POST /  {"message": "...", "history": [...]}        (history optional)
+     -> {"answer": "...", "sources": [...], "history": [...]}
+```
+A Lambda invocation has no memory of the previous one (unlike `chat.py`'s
+in-memory list) — the caller round-trips `history`: send it, get the updated
+list back, resend it next call. Verified working: a follow-up question
+("what about the revised estimate for 2024-25?") correctly resolved via
+condensation using the history sent back from the prior call.
+
+**Resources created:**
+
+| Resource | Name/ARN |
+|---|---|
+| ECR repository | `230802932766.dkr.ecr.us-east-1.amazonaws.com/wardwatch-chatbot` |
+| IAM role | `wardwatch-chatbot-role` — `AWSLambdaBasicExecutionRole` + inline `wardwatch-secrets-and-bedrock` (read the aurora-master secret; invoke ONLY the three models this function actually calls: Nova embeddings, `nova-2-lite` condense model, `deepseek.r1` chat model) |
+| Lambda function | `wardwatch-chatbot`, 512MB/60s timeout (longer than healthcheck's 30s — DeepSeek R1 reasoning is slower than a healthcheck ping) |
+| Function URL | `https://xqknt4qdig7qifx7mcojdicamu0yiyoc.lambda-url.us-east-1.on.aws/`, `AuthType: NONE`, CORS `AllowOrigins: ["*"]` / `AllowMethods: ["POST"]` |
+
+**Known issue hit — public Function URL access needs TWO permission
+statements, not one:**
+```powershell
+aws lambda add-permission --function-name <name> \
+  --statement-id FunctionURLAllowPublicAccess --action lambda:InvokeFunctionUrl \
+  --principal "*" --function-url-auth-type NONE
+
+aws lambda add-permission --function-name <name> \
+  --statement-id FunctionURLAllowInvokeAction --action lambda:InvokeFunction \
+  --principal "*" --invoked-via-function-url
+```
+Missing the second one (easy to miss — `create-function-url-config` with
+`--auth-type NONE` looks like it should be enough) produces a `403 Forbidden`
+on every request even though `get-function-url-config` correctly shows
+`AuthType: NONE`. Both statements existed on `wardwatch-healthcheck` already;
+this tripped only because the second one wasn't in the copy-paste command,
+only discovered by diffing `aws lambda get-policy` against a working function.
+
+**Aurora also got real data in this stage** — was empty (0 rows) since Stage
+1-2; re-ran `ingest.py` for both source documents against Aurora (57 chunks
+total, matching local), so the chatbot Lambda's answers are no longer
+hypothetical.
 
 ---
 
