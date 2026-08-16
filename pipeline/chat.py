@@ -11,7 +11,7 @@ from chat_logic import MODEL, MAX_HISTORY_TURNS, condense, retrieve, format_cont
 
 
 def main() -> None:
-    print(f"Ward Watch chat ({MODEL}) — Ctrl+C to quit.\n")
+    print(f"The Deccan Sentinel — chat ({MODEL}) — Ctrl+C to quit.\n")
 
     # history holds BARE question/answer turns only — never the retrieved
     # excerpts. Excerpts are ~3000 chars x TOP_K ≈ 6000 tokens per turn; keeping

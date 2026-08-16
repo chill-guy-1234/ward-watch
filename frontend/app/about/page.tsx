@@ -1,12 +1,14 @@
 export default function AboutPage() {
   return (
     <div className="about">
-      <h1>About Ward Watch</h1>
+      <h1>About The Deccan Sentinel</h1>
       <p>
-        Ward Watch is a civic-accountability tracker for Hyderabad — an
-        attempt to make budgets, documents, and representation status as
-        easy to check as a flight status board, across the city&apos;s three
-        municipal corporations:
+        The Deccan Sentinel is a civic-accountability and city-knowledge
+        assistant for Hyderabad — an attempt to make budgets, documents, and
+        representation status as easy to check as a flight status board,
+        alongside general questions about the city&apos;s history, economy
+        and transit. Wards stay at the core of it, across the city&apos;s
+        three municipal corporations:
       </p>
       <ul>
         <li>

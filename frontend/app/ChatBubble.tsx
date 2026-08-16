@@ -22,7 +22,7 @@ export default function ChatBubble() {
       <button
         className="chat-fab"
         onClick={onOpen}
-        aria-label="Open Ward Watch chat"
+        aria-label="Open The Deccan Sentinel chat"
         aria-hidden={open}
         tabIndex={open ? -1 : 0}
       >
@@ -45,10 +45,10 @@ export default function ChatBubble() {
             className="chat-modal"
             role="dialog"
             aria-modal="true"
-            aria-label="Ward Watch chat"
+            aria-label="The Deccan Sentinel chat"
           >
             <div className="chat-modal-head">
-              <strong>Ask Ward Watch</strong>
+              <strong>Ask the Sentinel</strong>
               <button
                 className="chat-modal-close"
                 onClick={onClose}

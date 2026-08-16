@@ -14,7 +14,7 @@ export default function Nav() {
 
   return (
     <nav className="nav">
-      <span className="nav-brand">Ward Watch</span>
+      <span className="nav-brand">The Deccan Sentinel</span>
       {LINKS.map((link) => (
         <Link
           key={link.href}

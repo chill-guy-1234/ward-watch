@@ -82,7 +82,7 @@ export default function ChatWidget() {
         ...withUser,
         {
           role: "assistant" as const,
-          text: `Something went wrong reaching Ward Watch: ${
+          text: `Something went wrong reaching The Deccan Sentinel: ${
             err instanceof Error ? err.message : "unknown error"
           }`,
         },

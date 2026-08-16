@@ -4,7 +4,7 @@ import Nav from "./Nav";
 import ChatBubble from "./ChatBubble";
 
 export const metadata: Metadata = {
-  title: "Ward Watch",
+  title: "The Deccan Sentinel",
   description:
     "Look up GHMC/CMC/MMC wards and ask questions about Hyderabad's civic budget and documents.",
 };

@@ -1,9 +1,15 @@
-# Hyderabad Ward Watch
+# The Deccan Sentinel
 
-A civic-accountability tracker for Hyderabad — a "FlightRadar24 for local
-government." Residents look up their GHMC/CMC/MMC ward and see fund allocation,
-sanctioned works, and who (if anyone) represents them, plus a RAG chatbot over
-ingested civic documents.
+*(Codename `wardwatch` internally — repo name, AWS resource names, and env
+vars are unchanged; see "On the name" below.)*
+
+A civic-accountability and city-knowledge tracker for Hyderabad — a
+"FlightRadar24 for local government," now grown beyond just wards.
+Residents look up their GHMC/CMC/MMC ward and see fund allocation,
+sanctioned works, and who (if anyone) represents them; a RAG chatbot
+answers both civic questions and general ones about the city (history,
+economy, transit) over ingested documents. Wards remain the core — general
+knowledge is the addition, not a replacement.
 
 Full brief: [`PROJECT_HANDOVER.md`](PROJECT_HANDOVER.md).
 Current civic-status research: [`docs/VERIFICATION-2026-08-15.md`](docs/VERIFICATION-2026-08-15.md).
@@ -16,7 +22,30 @@ Security posture — what's protected, what isn't yet, and why:
 > ⚠️ Elections and fund confirmations move. Re-verify handover doc §4 and §11
 > before writing code that depends on them.
 
-## Status
+## On the name (2026-08-16)
+
+Renamed from "Ward Watch" to **The Deccan Sentinel** — the app outgrew the
+old name once general Hyderabad knowledge (history, economy, transit, SCB,
+HMDA) joined ward/fund tracking as a real part of what it does, not a
+side feature. Wards are still the core, and still the part that matters
+most once fund/works data becomes reliable — this is an expansion of scope,
+not a pivot away from civic accountability.
+
+**What changed:** every user-facing name — page title, nav, About page,
+README, the chatbot's own system-prompt identity (it now introduces itself
+as The Deccan Sentinel, not Ward Watch).
+
+**What deliberately did NOT change:** the GitHub repo name, all AWS
+resource identifiers (`wardwatch-chatbot`, `wardwatch-wardlookup`,
+`wardwatch-healthcheck` Lambdas; `wardwatch-documents` S3 bucket;
+`wardwatch-*` IAM roles; the `wardwatch` Aurora database), and the
+`WARDWATCH_*` environment variable names. Renaming those would mean
+rebuilding every Function URL (breaking the frontend's hardcoded fallback
+defaults), re-wiring Amplify's GitHub webhook, and touching every IAM
+policy and Docker build — real infrastructure risk for zero user-facing
+benefit, since nobody visiting the site ever sees a Lambda's name.
+`wardwatch` is the stable internal codename now, the way a company's
+internal project codename can outlive its public product name.
 
 | Phase | What | State |
 |---|---|---|
@@ -136,7 +165,7 @@ against primary sources — that would mean re-verifying an entire city's
 history and economy, out of proportion to what this pass was for. The one
 exception: the mayors list's claim that the post has been vacant since 10
 February 2026 was cross-checked against the article's own infobox field
-(`incumbentsince`), and matches Ward Watch's own `civic_body`/`office` seed
+(`incumbentsince`), and matches The Deccan Sentinel's own `civic_body`/`office` seed
 data independently.
 
 The mayors list needed a different extraction path than the others:
@@ -157,9 +186,9 @@ A user question surfaced a real gap: **Secunderabad Cantonment Board (SCB)**
 is a fourth civic body in the Hyderabad metro, geographically embedded in
 the urban core, administered by the Ministry of Defence (not the state
 government) under the Cantonments Act 2006 — chaired by a serving military
-officer. It is not GHMC/CMC/MMC and was entirely absent from Ward Watch's
+officer. It is not GHMC/CMC/MMC and was entirely absent from The Deccan Sentinel's
 knowledge before this. Its elected board's term expired in **2021** (longer
-without an election than any of the three bodies Ward Watch already
+without an election than any of the three bodies The Deccan Sentinel already
 covers), and a 2023 proposal to merge its civilian areas into GHMC remains
 unresolved as of the most recent reporting found — a competing proposal to
 merge into MMC instead was also contested. Two documents ingested: a
@@ -176,7 +205,7 @@ researching this — a commonly-confused *different kind* of body: a
 (appointed Metropolitan Commissioner, CM as Chairman), not a rival
 municipal government. GHMC/CMC/MMC/SCB sit inside HMDA's much larger
 planning area alongside many gram panchayats HMDA plans for but that were
-never in Ward Watch's scope. Included so the chatbot can correctly explain
+never in The Deccan Sentinel's scope. Included so the chatbot can correctly explain
 "what's the difference between GHMC and HMDA" — a genuinely common
 question — rather than being silent on it.
 
