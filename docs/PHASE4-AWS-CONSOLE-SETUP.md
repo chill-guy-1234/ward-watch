@@ -198,12 +198,42 @@ hypothetical.
 
 ---
 
-## Stage 4 — Amplify Hosting (frontend, later)
+## Stage 4 — Amplify Hosting (frontend)
 
-Also deferred — there's no frontend code yet (handover doc specifies Next.js;
-we haven't started it). Once a minimal ward-lookup page exists:
-Amplify console → New app → Host web app → connect the GitHub repo → it
-auto-deploys on every push to `main`. Simple enough to do solo when we get there.
+Frontend built: `frontend/` is a Next.js app (App Router, static export —
+`next.config.ts` sets `output: 'export'`), three routes (chat / ward lookup
+/ about), calling the deployed Function URLs directly client-side. No SSR,
+no API routes — the backend already exists as public HTTP endpoints
+(`wardwatch-chatbot`, `wardwatch-wardlookup`), so Amplify only needs to
+serve static files. `amplify.yml` at the repo root already has the correct
+monorepo build config (`appRoot: frontend`, `baseDirectory: out`).
+
+This step needs the console because connecting a GitHub repo to Amplify is
+an OAuth flow — same reason Stage 1's Aurora setup was console-first.
+
+1. **Amplify console → New app → Host web app**
+2. **Deploy your app → GitHub** → authorize the Amplify GitHub App if this
+   is the first time → select the `ward-watch` repository, branch `main`
+3. Amplify detects `amplify.yml` at the repo root automatically — you
+   should see `appRoot: frontend` reflected in the build settings preview.
+   If it doesn't pick it up, the console's "App settings → Build settings"
+   page lets you paste the file's contents manually.
+4. **Environment variables**: none required — `NEXT_PUBLIC_CHATBOT_URL` and
+   `NEXT_PUBLIC_WARDLOOKUP_URL` default to the real deployed Function URLs
+   inside `frontend/app/lib/api.ts` (they're public, unauthenticated
+   endpoints, nothing secret about hardcoding them as defaults). Only add
+   these env vars in Amplify if a Lambda gets rebuilt and its Function URL
+   changes — env var wins over the hardcoded default without a redeploy of
+   this file.
+5. **Save and deploy.** First build takes a few minutes; Amplify gives you
+   a `https://main.<app-id>.amplifyapp.com` URL when done, and auto-deploys
+   on every push to `main` from here on.
+
+**Sanity check once deployed:** open the Amplify URL, ask the chatbot a
+question (expect 20-45s — DeepSeek R1 reasoning, not a bug), then search a
+ward number on `/ward`. Check the browser console for CORS errors if either
+fails silently — both Function URLs already have `AllowOrigins: ["*"]`
+configured, so a CORS failure would point at a wrong/stale URL instead.
 
 ---
 

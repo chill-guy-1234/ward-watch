@@ -22,7 +22,7 @@ Phase 4 console setup steps: [`docs/PHASE4-AWS-CONSOLE-SETUP.md`](docs/PHASE4-AW
 | 1 | Schema + static seed data (local Postgres) | done |
 | 2 | Ingestion + embeddings + RAG chatbot | done |
 | 3 | Extraction agent (documents → structured rows) | built; fund totals unreliable, see note below |
-| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | Aurora live (with ingested data) + 2 Lambdas live (`wardwatch-healthcheck`, public `wardwatch-chatbot`); Amplify pending — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` |
+| 4 | Deploy to AWS (Aurora, Lambda, Amplify) | Aurora live (300 wards seeded) + 3 Lambdas live (healthcheck, public chatbot, public ward lookup) + frontend built; Amplify Hosting connection is a console step — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 4 |
 | 5 | Step Functions orchestration, alerts, Election Watch Agent | |
 
 ## Layout
@@ -43,9 +43,13 @@ lambda/            Deployed AWS Lambda functions (container images)
                    Manager → Aurora → Bedrock. Invoke-only, no public URL.
   chatbot/         wraps chat_logic.py behind a public Function URL — the
                    UI-facing endpoint a frontend will call directly
-  Both Dockerfiles build from the REPO ROOT (not their own directory) so
-  they COPY pipeline/db.py + embeddings.py directly — one copy of each,
-  no drift between what's deployed and what runs locally.
+  wardlookup/      structured search over the seeded 300-ward table
+  Dockerfiles build from the REPO ROOT (not their own directory) so they
+  COPY pipeline/db.py + embeddings.py directly — one copy of each, no
+  drift between what's deployed and what runs locally.
+frontend/          Next.js app (static export), deployed via Amplify
+                   Hosting — chat / ward lookup / about, calling the
+                   Function URLs above directly, no server compute needed
 data/raw/          source documents (gitignored — not code)
 docs/              research and verification notes
 ```
@@ -143,6 +147,20 @@ GET https://bb523lbg7ub77ksjojsbb5fhsm0fooht.lambda-url.us-east-1.on.aws/?q=jubi
 ward name. Returns up to 20 matches, each with zone, circle, civic body, and
 `corporator_status`/`civic_body_status` straight from the `office` table —
 no fund/works data (still unreliable, see the extraction caveat above).
+
+## Frontend
+
+```powershell
+cd frontend
+npm install
+npm run dev       # http://localhost:3000, calls the deployed Lambdas directly
+npm run build     # static export to frontend/out/ (next.config.ts: output: 'export')
+```
+
+Three routes: chat (`/`), ward lookup (`/ward`), about (`/about`). No SSR,
+no API routes — plain client-side `fetch` to the public Function URLs, so
+Amplify Hosting only ever serves static files. Deployment is a one-time
+console step (GitHub OAuth) — see `docs/PHASE4-AWS-CONSOLE-SETUP.md` Stage 4.
 
 ## How the RAG pipeline works
 
