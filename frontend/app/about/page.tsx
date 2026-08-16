@@ -23,6 +23,14 @@ export default function AboutPage() {
         All three were carved out of a single, larger GHMC on 11 Feb 2026 —
         see &quot;Civic status&quot; below for what that means today.
       </p>
+      <p>
+        <strong>Not covered by ward lookup:</strong> Secunderabad Cantonment
+        Board, a fourth civic body inside the urban core, run by the Ministry
+        of Defence rather than the state government — the chatbot can
+        explain it, but its wards aren&apos;t in the ward search. Also not
+        covered: HMDA, which isn&apos;t a rival local government at all —
+        see &quot;What&apos;s real here&quot; below for both.
+      </p>
 
       <h2>What&apos;s real here</h2>
       <p>
@@ -38,9 +46,11 @@ export default function AboutPage() {
           Primary or near-primary sources.
         </li>
         <li>
-          <strong>General city knowledge</strong> — six Wikipedia articles
-          (city overview, history, economy, administration, demographics,
-          list of mayors) so the chatbot can answer beyond the budget PDF.
+          <strong>General city knowledge</strong> — Wikipedia articles on
+          the city overview, history, economy, administration, demographics,
+          list of mayors, Secunderabad Cantonment Board, and HMDA, plus a
+          hand-compiled note on SCB&apos;s stalled GHMC merger (sourced to
+          the actual news coverage, since Wikipedia doesn&apos;t cover it).
           Not independently fact-checked against primary sources the way
           the ward list was — treat these as a reasonable starting point,
           not an audited record.

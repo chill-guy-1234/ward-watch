@@ -149,6 +149,39 @@ genuine gap in the historical record, not a parsing failure.
 Ingested into both Aurora and local Postgres the same way as any other
 document (`doc-type scraped_page`, `--publisher Wikipedia`).
 
+### Secunderabad Cantonment Board + HMDA (2026-08-16)
+
+A user question surfaced a real gap: **Secunderabad Cantonment Board (SCB)**
+is a fourth civic body in the Hyderabad metro, geographically embedded in
+the urban core, administered by the Ministry of Defence (not the state
+government) under the Cantonments Act 2006 — chaired by a serving military
+officer. It is not GHMC/CMC/MMC and was entirely absent from Ward Watch's
+knowledge before this. Its elected board's term expired in **2021** (longer
+without an election than any of the three bodies Ward Watch already
+covers), and a 2023 proposal to merge its civilian areas into GHMC remains
+unresolved as of the most recent reporting found — a competing proposal to
+merge into MMC instead was also contested. Two documents ingested: a
+Wikipedia overview, and a hand-composed status note citing the news
+articles on the merger dispute (Wikipedia's own SCB article doesn't cover
+it). **Not** added to the `ward`/`civic_body` schema — that would need the
+same gazette-level sourcing rigor as the 300-ward GHMC/CMC/MMC data, and
+SCB's own ward boundaries aren't something this pass verified. Chatbot-only
+for now.
+
+Also ingested **HMDA** (Hyderabad Metropolitan Development Authority) while
+researching this — a commonly-confused *different kind* of body: a
+7,257 km² planning/coordination authority with no wards or elections
+(appointed Metropolitan Commissioner, CM as Chairman), not a rival
+municipal government. GHMC/CMC/MMC/SCB sit inside HMDA's much larger
+planning area alongside many gram panchayats HMDA plans for but that were
+never in Ward Watch's scope. Included so the chatbot can correctly explain
+"what's the difference between GHMC and HMDA" — a genuinely common
+question — rather than being silent on it.
+
+Verified end-to-end: correctly explains SCB is not part of GHMC, cites the
+merger dispute, and correctly distinguishes GHMC's elected-ward governance
+from HMDA's appointed planning role.
+
 ### Deployed chatbot endpoint
 
 The same RAG loop is also live as a public Lambda, callable without any AWS
