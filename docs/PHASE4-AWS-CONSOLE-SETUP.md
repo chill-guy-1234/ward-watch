@@ -246,3 +246,38 @@ way a normal RDS instance can — Aurora Serverless v2 clusters run continuously
 at the minimum capacity. If cost becomes a concern, the cluster can be deleted
 and recreated from the same Flyway migrations in a few minutes when you're
 ready to resume.
+
+---
+
+## Known issue — a chained `docker push && ... && update-function-code` that gets backgrounded can silently deploy the OLD image
+
+Hit during the 2026-08-16 rebrand deploy. A long-running chained command
+(`docker build && docker push && aws lambda update-function-code && aws
+lambda wait function-updated`) got moved to background after exceeding the
+foreground timeout. It reported completing with exit code 0, and
+`aws lambda get-function ... LastUpdateStatus` showed `Successful` —
+both looked like confirmation. But `aws ecr describe-images --image-ids
+imageTag=latest` showed the `:latest` tag still pointed at the **previous**
+image digest, and the deployed Lambda's `CodeSha256` matched the old image,
+not the new one. The chatbot kept introducing itself by the old name for
+several invocations after the "successful" deploy.
+
+**Root cause:** the `docker push` never actually finished tagging `:latest`
+in ECR before the shell was backgrounded — the layer uploads completed (all
+showed `Pushed` in the log) but the final manifest step didn't land. `&&`
+normally guarantees `update-function-code` only runs after a *real* `docker
+push` success, but that guarantee doesn't survive the process being moved
+to a background job mid-command on Windows.
+
+**Fix:** don't trust `LastUpdateStatus: Successful` alone after a
+backgrounded deploy chain. Cross-check two things before believing a deploy
+landed:
+```powershell
+# Does the :latest tag in ECR actually point at the digest you just built?
+aws ecr describe-images --repository-name <repo> --image-ids imageTag=latest --query "imageDetails[0].imageDigest"
+
+# Does the deployed Lambda's CodeSha256 match that same digest?
+aws lambda get-function --function-name <fn> --query "Configuration.CodeSha256"
+```
+If they don't match, re-run `docker push` standalone (safe, idempotent) and
+`update-function-code` again — don't just re-trust the same chained command.
