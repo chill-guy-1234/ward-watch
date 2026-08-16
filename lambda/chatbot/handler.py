@@ -50,8 +50,17 @@ def handler(event, context):
     ]
     del new_history[:-MAX_HISTORY_TURNS]
 
+    # excerpt is the actual retrieved text, not just metadata -- the citation
+    # chips in the UI expand to this, which is the whole point of citing at
+    # all (an answer traceable to a real passage, not just a claimed source).
     sources = [
-        {"title": c["title"], "page": c["page"], "publisher": c["publisher"], "url": c["url"]}
+        {
+            "title": c["title"],
+            "page": c["page"],
+            "publisher": c["publisher"],
+            "url": c["url"],
+            "excerpt": c["text"],
+        }
         for c in chunks
     ]
 
