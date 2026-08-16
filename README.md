@@ -224,5 +224,17 @@ Two principles from the handover doc, enforced in `V1__init_schema.sql`:
 Migrations are immutable once applied — Flyway checksums each file and records
 it in `flyway_schema_history`. Schema changes always go in a new `V*` file.
 
-Wards and circles are deliberately **not** seeded yet: no official
-machine-readable 300-ward list exists, and re-delimitation is pending.
+**Wards and circles are seeded** (`V8__seed_current_wards.sql`): the current
+300-ward structure (GHMC 150 / CMC 76 / MMC 74), transcribed from Wikipedia's
+"Administrative divisions of Hyderabad" and cross-checked against the primary
+source — Telangana Gazette Extraordinary No. 773, 25 Dec 2025 — for a sample
+of wards. One transcription error found and fixed (wards 95/96 were
+transposed); everything else in the sample matched. `reservation_category`,
+`population_est`, and `geometry` are deliberately left NULL — not available
+at ward granularity from these sources, and not fabricated. See V8's own
+comment header for the full sourcing trail.
+
+A further 300 → 400 delimitation is still proposed (unconfirmed) — that's
+what the `valid_from`/`valid_to` versioning exists for; a future migration
+will close out `valid_to` on the current 300 and insert the next version
+rather than editing these rows in place.
