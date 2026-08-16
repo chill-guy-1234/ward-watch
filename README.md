@@ -10,6 +10,8 @@ Current civic-status research: [`docs/VERIFICATION-2026-08-15.md`](docs/VERIFICA
 AWS concepts (VPC/subnets/security groups, Aurora, ECR vs ECS, how Lambda gets
 called from a UI): [`docs/CONCEPTS-AWS.md`](docs/CONCEPTS-AWS.md).
 Phase 4 console setup steps: [`docs/PHASE4-AWS-CONSOLE-SETUP.md`](docs/PHASE4-AWS-CONSOLE-SETUP.md).
+Security posture — what's protected, what isn't yet, and why:
+[`docs/SECURITY.md`](docs/SECURITY.md).
 
 > ⚠️ Elections and fund confirmations move. Re-verify handover doc §4 and §11
 > before writing code that depends on them.

@@ -1,5 +1,8 @@
 {
-  "AllowOrigins": ["*"],
+  "AllowOrigins": [
+    "https://main.d1g0llf0kxmkfl.amplifyapp.com",
+    "http://localhost:3000"
+  ],
   "AllowMethods": ["GET"],
   "AllowHeaders": ["content-type"]
 }

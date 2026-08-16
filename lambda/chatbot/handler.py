@@ -19,6 +19,29 @@ import json
 
 from chat_logic import MAX_HISTORY_TURNS, answer, condense, format_context, retrieve
 
+# Public, unauthenticated endpoint that calls paid Bedrock models per request
+# -- unlike wardlookup (a cheap Postgres query), an oversized or malformed
+# payload here directly costs money. These caps reject the abuse case
+# without touching any legitimate question (a real question is a sentence,
+# not 2000+ characters; a real session is dozens of turns, not thousands).
+MAX_MESSAGE_CHARS = 2000
+MAX_HISTORY_ENTRIES = 2 * MAX_HISTORY_TURNS
+
+
+def _valid_history(history) -> bool:
+    if not isinstance(history, list) or len(history) > MAX_HISTORY_ENTRIES:
+        return False
+    return all(
+        isinstance(turn, dict)
+        and turn.get("role") in ("user", "assistant")
+        and isinstance(turn.get("content"), list)
+        and len(turn["content"]) == 1
+        and isinstance(turn["content"][0], dict)
+        and isinstance(turn["content"][0].get("text"), str)
+        and len(turn["content"][0]["text"]) <= MAX_MESSAGE_CHARS
+        for turn in history
+    )
+
 
 def handler(event, context):
     body = json.loads(event.get("body") or "{}")
@@ -27,6 +50,10 @@ def handler(event, context):
 
     if not question:
         return _response(400, {"error": "message is required"})
+    if len(question) > MAX_MESSAGE_CHARS:
+        return _response(400, {"error": f"message too long (max {MAX_MESSAGE_CHARS} characters)"})
+    if not _valid_history(history):
+        return _response(400, {"error": "history is malformed or too long"})
 
     search_query = condense(question, history)
     chunks = retrieve(search_query)

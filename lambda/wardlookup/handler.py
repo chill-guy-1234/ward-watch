@@ -20,6 +20,12 @@ import json
 
 import db
 
+# Cheap Postgres query, so this is lower stakes than the chatbot's cost-per-
+# request -- but an absurdly long `q` (e.g. thousands of digits, which would
+# fail the ::int cast in SEARCH_SQL with an unhandled exception) is still
+# worth rejecting cleanly rather than 500ing.
+MAX_QUERY_CHARS = 100
+
 FIELDS_SQL = """
     SELECT w.ward_number, w.name AS ward_name, z.name AS zone, c.name AS circle,
            cb.name AS civic_body, corp.status AS corporator_status,
@@ -51,6 +57,9 @@ SEARCH_SQL = (
 def handler(event, context):
     params = event.get("queryStringParameters") or {}
     q = (params.get("q") or "").strip()
+
+    if len(q) > MAX_QUERY_CHARS:
+        return _response(400, {"error": f"q too long (max {MAX_QUERY_CHARS} characters)"})
 
     with db.connect() as conn:
         if not q:
