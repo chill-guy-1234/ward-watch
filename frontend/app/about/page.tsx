@@ -127,6 +127,8 @@ export default function AboutPage() {
           github.com/chill-guy-1234/ward-watch
         </a>
       </p>
+
+      <footer className="footer">Made with ❤️ in Hyderabad, for Hyderabad</footer>
     </div>
   );
 }
