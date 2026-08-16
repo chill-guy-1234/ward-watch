@@ -1,3 +1,4 @@
+import Link from "next/link";
 import BudgetSankey from "./BudgetSankey";
 import { EXPENDITURE, INCOME, TOTAL } from "./data";
 
@@ -28,21 +29,6 @@ export default function BudgetPage() {
           breakdown has been published — a headline figure, not a line-item
           budget. If any of that changes, this page is exactly where a
           zone-wise version would go.
-        </p>
-      </details>
-
-      <details className="budget-note">
-        <summary>Why these numbers and not the extraction agent&apos;s</summary>
-        <p>
-          The chatbot&apos;s extraction agent found ~800 fund_allocation rows
-          from this same PDF, but summing them inflates any total by roughly
-          5x — the same figure gets restated under different labels across
-          the summary table, a detailed schedule, and departmental
-          annexures. This page instead hand-transcribes the ONE table pair
-          that isn&apos;t restated elsewhere (&quot;Budget Highlights: Income
-          / Expenditure&quot;, pages 30-31 of the source PDF) — both sides
-          checked by hand to sum to exactly ₹8,440cr, the same verified
-          total the chatbot cites.
         </p>
       </details>
 
@@ -94,7 +80,9 @@ export default function BudgetPage() {
 
       <p className="muted budget-source">
         Source: GHMC Budget Estimates 2025-26, &quot;Budget Highlights FY
-        2025-26&quot; (Income p.30, Expenditure p.31).
+        2025-26&quot; (Income p.30, Expenditure p.31). Why these figures
+        and not the chatbot&apos;s raw extraction:{" "}
+        <Link href="/sources">Data &amp; Sources</Link>.
       </p>
     </div>
   );
