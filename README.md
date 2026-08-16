@@ -117,6 +117,36 @@ cd pipeline
 ..\.venv\Scripts\python smoke_test.py
 ```
 
+### General-knowledge corpus (2026-08-16)
+
+Until this point the chatbot could only answer from the budget PDF and one
+trifurcation article — accurate, but narrow. Six Wikipedia articles were
+added under `data/raw/general/` (city overview, history, economy,
+administration, demographics, list of mayors) so it can also answer
+general questions about the city.
+
+**Sourcing tier is deliberately lighter than the ward data.** The 300-ward
+seed (V8) was cross-checked against the official delimitation gazette for a
+sample of wards; these six articles were not independently fact-checked
+against primary sources — that would mean re-verifying an entire city's
+history and economy, out of proportion to what this pass was for. The one
+exception: the mayors list's claim that the post has been vacant since 10
+February 2026 was cross-checked against the article's own infobox field
+(`incumbentsince`), and matches Ward Watch's own `civic_body`/`office` seed
+data independently.
+
+The mayors list needed a different extraction path than the others:
+Wikipedia's plain-text extract API silently drops wikitables, and the
+actual list of mayors *is* a wikitable — the naive extract came back with
+section headers and no names. Fixed by fetching raw wikitext (same
+technique as the V8 ward-list parse) and parsing the table directly,
+producing 21 MCH-era mayors (1951–2007) and 4 GHMC-era mayors (2007–2026).
+Several 1970s–80s entries have no recorded name in the source itself — a
+genuine gap in the historical record, not a parsing failure.
+
+Ingested into both Aurora and local Postgres the same way as any other
+document (`doc-type scraped_page`, `--publisher Wikipedia`).
+
 ### Deployed chatbot endpoint
 
 The same RAG loop is also live as a public Lambda, callable without any AWS

@@ -27,12 +27,30 @@ export default function AboutPage() {
       <h2>What&apos;s real here</h2>
       <p>
         The chatbot answers only from documents that have actually been
-        ingested (currently: the GHMC 2025-26 budget estimates PDF and one
-        news article on the 2026 trifurcation), and every claim carries a
-        citation you can expand to read the source excerpt yourself. The
-        ward lookup uses the current 300-ward structure (GHMC 150 / CMC 76 /
-        MMC 74), cross-checked against the official delimitation gazette for
-        a sample of wards.
+        ingested, and every claim carries a citation you can expand to read
+        the source excerpt yourself. Two tiers of source, with different
+        confidence:
+      </p>
+      <ul>
+        <li>
+          <strong>Civic documents</strong> — the GHMC 2025-26 budget
+          estimates PDF and one news article on the 2026 trifurcation.
+          Primary or near-primary sources.
+        </li>
+        <li>
+          <strong>General city knowledge</strong> — six Wikipedia articles
+          (city overview, history, economy, administration, demographics,
+          list of mayors) so the chatbot can answer beyond the budget PDF.
+          Not independently fact-checked against primary sources the way
+          the ward list was — treat these as a reasonable starting point,
+          not an audited record.
+        </li>
+      </ul>
+      <p>
+        The ward lookup uses the current 300-ward structure (GHMC 150 / CMC
+        76 / MMC 74), cross-checked against the official delimitation
+        gazette for a sample of wards — the highest-confidence dataset in
+        the app.
       </p>
 
       <h2>The transport map</h2>
