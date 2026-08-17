@@ -27,6 +27,13 @@ from chat_logic import MAX_HISTORY_TURNS, answer, condense, format_context, retr
 MAX_MESSAGE_CHARS = 2000
 MAX_HISTORY_ENTRIES = 2 * MAX_HISTORY_TURNS
 
+# History entries include past ASSISTANT replies, not just questions --
+# answer()'s maxTokens=2000 (chat_logic.py) allows replies of roughly
+# 4,000-8,000 characters. Reusing MAX_MESSAGE_CHARS here was the actual bug:
+# any conversation whose first reply ran long enough rejected the very next
+# message with a 400, even though nothing about the request was abusive.
+MAX_HISTORY_ENTRY_CHARS = 9000
+
 
 def _valid_history(history) -> bool:
     if not isinstance(history, list) or len(history) > MAX_HISTORY_ENTRIES:
@@ -38,7 +45,7 @@ def _valid_history(history) -> bool:
         and len(turn["content"]) == 1
         and isinstance(turn["content"][0], dict)
         and isinstance(turn["content"][0].get("text"), str)
-        and len(turn["content"][0]["text"]) <= MAX_MESSAGE_CHARS
+        and len(turn["content"][0]["text"]) <= MAX_HISTORY_ENTRY_CHARS
         for turn in history
     )
 

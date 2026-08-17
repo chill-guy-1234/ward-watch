@@ -19,7 +19,8 @@ export async function askChatbot(message: string, history: ChatHistoryTurn[]) {
     body: JSON.stringify({ message, history }),
   });
   if (!res.ok) {
-    throw new Error(`Chat request failed (${res.status})`);
+    const body = await res.json().catch(() => ({ error: null }));
+    throw new Error(body.error ?? `Chat request failed (${res.status})`);
   }
   return res.json() as Promise<{
     answer: string;
